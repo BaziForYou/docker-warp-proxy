@@ -16,7 +16,7 @@ else
 	# Consumer deployment: create a free registration. Newer clients auto-register on
 	# startup and the registration persists across restarts, so "registration new" can
 	# fail with "Old registration is still around" — treat that as success instead of
-	# looping forever (otherwise socat below never starts).
+	# looping forever (otherwise gost below never starts).
 	while true; do
 		if out="$(warp-cli --accept-tos registration new 2>&1)"; then
 			break
@@ -45,9 +45,14 @@ fi
 
 warp-cli --accept-tos connect
 
-# Gost acts as a multiplexed proxy listening on 40000 (allows both HTTP & SOCKS5 usage)
-# and forwards traffic directly to Cloudflare Warp's SOCKS5 on 40001.
-gost -L :40000 -F socks5://127.0.0.1:40001
+# Gost acts as a multiplexed proxy listening on 40000. Using the 'auto://' scheme, 
+# it automatically detects and supports incoming traffic for:
+#   - HTTP proxy
+#   - HTTPS proxy (CONNECT)
+#   - SOCKS4
+#   - SOCKS5
+# and forwards that traffic directly to Cloudflare Warp's SOCKS5 on 40001.
+gost -L "auto://:40000" -F "socks5://127.0.0.1:40001"
 ) &
 
 exec warp-svc
