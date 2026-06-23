@@ -38,12 +38,16 @@ warp-cli --accept-tos proxy port 40001 2>/dev/null || true
 # which makes warp-cli reject the key — strip a single pair of leading/trailing quotes.
 LICENSE="${LICENSE#[\"\']}"
 LICENSE="${LICENSE%[\"\']}"
+
 if [ "$LICENSE" != "" ]; then
 	warp-cli --accept-tos registration license "$LICENSE" || true
 fi
 
 warp-cli --accept-tos connect
-socat TCP-LISTEN:40000,fork TCP:localhost:40001  # socat is used to redirect traffic from 40000 to 40001
+
+# Gost acts as a multiplexed proxy listening on 40000 (allows both HTTP & SOCKS5 usage)
+# and forwards traffic directly to Cloudflare Warp's SOCKS5 on 40001.
+gost -L :40000 -F socks5://127.0.0.1:40001
 ) &
 
 exec warp-svc
